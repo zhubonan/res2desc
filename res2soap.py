@@ -103,23 +103,24 @@ def get_res_paths(workdir=None):
     return fnames, airss_info
 
 
-@click.command('res2soap')
+@click.command(
+    'res2soap',
+    help=
+    'Compute descriptors of the results uisng the quippy package and output in a cryan format (e.g the same as ca -v)'
+)
 @click.argument('workdir')
 @click.option('--nprocs',
               '-np',
               help='Number of processes for parallelisation.',
               default=4)
-@click.option('--save-name',
-              '-s',
-              help='Save file name',
-              default='soap_descs')
+@click.option('--save-name', '-s', help='Save file name', default='soap_descs')
 @click.option('--l-max', default=15)
 @click.option('--n-max', default=15)
 @click.option('--cutoff', default=5)
 @click.option('--desc-kind', default='soap')
 @click.option('--atom-sigma', default=0.01)
-@click.option('--centre-z', '-z', required=True, type=int, multiple=True)
-@click.option('--species-z', '-sz', required=True, type=int, multiple=True)
+@click.option('--centre-z', '-z', required=True, type=int, multiple=True, help='Atomic numbers of the atoms that the local descriptor should be computed')
+@click.option('--species-z', '-sz', required=True, type=int, multiple=True, help='Atomic numbers of the enironment atoms that should be inlcuded')
 def res2soap(cutoff, workdir, l_max, n_max, atom_sigma, centre_z, nprocs,
              save_name, species_z, desc_kind):
     """
