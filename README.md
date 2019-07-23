@@ -12,7 +12,7 @@ each option can be specified multiple times.
 
 You can get a list of options by passing `--help` flag.
 
-```
+```text
 Usage: res2soap.py [OPTIONS] WORKDIR
 
   Compute descriptors of the results uisng the quippy package and output in
@@ -39,6 +39,11 @@ Requirement
 
 Installation of `airss` and `quippy` packages.
 
+
+Testing
+-------
+
+Type `pytest`!
 
 Limitations
 -----------
