@@ -26,6 +26,7 @@ class Atoms2Soap(object):
         Initialise the object
         """
         self.desc_settings = desc_dict
+        self.desc_kind = desc_dict.pop('desc_kind')
         self._desc = None
 
     @property
@@ -35,7 +36,7 @@ class Atoms2Soap(object):
             if isinstance(value, (tuple, list)):
                 value = ','.join(map(str, value))
             settings.append('{}={}'.format(key, value))
-        string = 'soap ' + ' '.join(settings)
+        string = self.desc_kind + ' ' + ' '.join(settings)
         return string
 
     def init_desc(self):
@@ -115,11 +116,12 @@ def get_res_paths(workdir=None):
 @click.option('--l-max', default=15)
 @click.option('--n-max', default=15)
 @click.option('--cutoff', default=5)
+@click.option('--desc-kind', default='soap')
 @click.option('--atom-sigma', default=0.01)
 @click.option('--centre-z', '-z', required=True, type=int, multiple=True)
 @click.option('--species-z', '-sz', required=True, type=int, multiple=True)
 def res2soap(cutoff, workdir, l_max, n_max, atom_sigma, centre_z, nprocs,
-             save_name, species_z):
+             save_name, species_z, desc_kind):
     """
     Compute SOAP descriptors for res files, get the order or files from
     the `ca -v` commands for consistency.
@@ -127,6 +129,7 @@ def res2soap(cutoff, workdir, l_max, n_max, atom_sigma, centre_z, nprocs,
     from ase.io import read
     from tqdm import tqdm
     desc_settings = {
+        'desc_kind': desc_kind,
         'cutoff': cutoff,
         'l_max': l_max,
         'n_max': n_max,
