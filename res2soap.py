@@ -3,6 +3,16 @@
 from multiprocessing import Pool
 import quippy
 import click
+from functools import partial
+
+
+def _instance_method_alias(obj, arg):
+    """
+    Alias for instance method that allows the method to be called in a 
+    multiprocessing pool
+    """
+    res = obj.get_desc_wrap(arg)
+    return res
 
 
 class Atoms2Soap(object):
@@ -16,14 +26,17 @@ class Atoms2Soap(object):
         Initialise the object
         """
         self.desc_settings = desc_dict
-        self._desc = True
+        self._desc = None
 
     @property
     def desc_string(self):
         settings = []
         for key, value in self.desc_settings.items():
+            if isinstance(value, (tuple, list)):
+                value = ','.join(map(str, value))
             settings.append('{}={}'.format(key, value))
-        return 'soap ' + ' '.join(settings)
+        string = 'soap ' + ' '.join(settings)
+        return string
 
     def init_desc(self):
         """Initialize the descriptor object"""
@@ -45,7 +58,7 @@ class Atoms2Soap(object):
         Usefully for parallel processing
         """
         n, atoms = args
-        return n, self.get_soap_desc(atoms)
+        return n, self.get_desc(atoms)
 
     def get_desc(self, atoms):
         """
@@ -98,14 +111,15 @@ def get_res_paths(workdir=None):
 @click.option('--save-name',
               '-s',
               help='Save file name',
-              default='soap_desc.xyz')
+              default='soap_descs')
 @click.option('--l-max', default=15)
 @click.option('--n-max', default=15)
-@click.option('--atoms-sigma', default=0.01)
-@click.option('--Z', '-z', required=True, type=int)
-@click.option('--species_Z', '-sz', required=True, type=int, multiple=True)
-def res2soap(cutoff, workdir, l_max, n_max, atoms_sigma, Z, nprocs, save_name,
-             species_Z):
+@click.option('--cutoff', default=5)
+@click.option('--atom-sigma', default=0.01)
+@click.option('--centre-z', '-z', required=True, type=int, multiple=True)
+@click.option('--species-z', '-sz', required=True, type=int, multiple=True)
+def res2soap(cutoff, workdir, l_max, n_max, atom_sigma, centre_z, nprocs,
+             save_name, species_z):
     """
     Compute SOAP descriptors for res files, get the order or files from
     the `ca -v` commands for consistency.
@@ -116,11 +130,12 @@ def res2soap(cutoff, workdir, l_max, n_max, atoms_sigma, Z, nprocs, save_name,
         'cutoff': cutoff,
         'l_max': l_max,
         'n_max': n_max,
-        'atoms_sigma': atoms_sigma,
+        'atom_sigma': atom_sigma,
         'average': 'T',
-        'n_species': len(species_Z),
-        'Z': Z,
-        'species_Z': ','.join(species_Z)
+        'n_species': len(species_z),
+        'n_Z': len(centre_z),
+        'Z': centre_z,
+        'species_Z': ','.join(map(str, species_z))
     }
     click.echo('Reading res files')
     fnames, airss_info = get_res_paths(workdir)
@@ -128,8 +143,10 @@ def res2soap(cutoff, workdir, l_max, n_max, atoms_sigma, Z, nprocs, save_name,
 
     click.echo('Computing descriptors in {} way parallel'.format(nprocs))
     comp = Atoms2Soap(desc_settings)
+    _bond_instance_method_alias = partial(_instance_method_alias, comp)
     pool = Pool(nprocs)
-    par_res = list(pool.imap_unordered(comp.get_soap_desc, tqdm(atom_list)))
+    par_res = list(
+        pool.imap_unordered(_bond_instance_method_alias, tqdm(atom_list)))
 
     click.echo('Re-ordering descriptor arrays')
     par_res.sort(key=lambda x: x[0])
