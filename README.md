@@ -12,6 +12,27 @@ each option can be specified multiple times.
 
 You can get a list of options by passing `--help` flag.
 
+```
+Usage: res2soap.py [OPTIONS] WORKDIR
+
+  Compute descriptors of the results uisng the quippy package and output in
+  a cryan format (e.g the same as ca -v)
+
+Options:
+  -np, --nprocs INTEGER     Number of processes for parallelisation.
+  -s, --save-name TEXT      Save file name
+  --l-max INTEGER
+  --n-max INTEGER
+  --cutoff INTEGER
+  --desc-kind TEXT
+  --atom-sigma FLOAT
+  -z, --centre-z INTEGER    Atomic numbers of the atoms that the local
+                            descriptor should be computed  [required]
+  -sz, --species-z INTEGER  Atomic numbers of the enironment atoms that should
+                            be inlcuded  [required]
+  --help                    Show this message and exit.
+```
+
 
 Requirement
 ------------
