@@ -1,12 +1,10 @@
-res2desc
---------
+# res2desc
 
 Compute descriptors for AIRSS style SHELX files
 
-Usage
------
+## Usage
 
-Invoke by `python res2soap.py <FOLDER_NAME> OPTION`. At the moment you must pass the 
+Invoke by `python res2soap.py <FOLDER_NAME> OPTION`. At the moment you must pass the
 atomic number of the centre atoms (`-z`) and the environment atoms (`-sz`). Note that
 each option can be specified multiple times.
 
@@ -33,28 +31,22 @@ Options:
   --help                    Show this message and exit.
 ```
 
-
-Requirement
-------------
+## Requirement
 
 * `ase` for reading SHELX files
 * `quippy` for computing SOAP descriptors
 * `DScribe` for computing descriptors
 
-
-Testing
--------
+## Testing
 
 Type `pytest`!
 
-Limitations
------------
+## Limitations
 
 * Not able to output to STDOUT at the moment
 * Fast reader may be used for the `res` files to create `quippy.Atoms` objects directly.
 
-TODO
-----
+## TODO
 
 * Add support of  DScribe library
 * Allow computing more types of descriptors other than SOAP

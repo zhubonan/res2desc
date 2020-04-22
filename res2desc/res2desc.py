@@ -1,26 +1,36 @@
-#!/usr/bin/env python2
+"""
+Converting from RES to SOAP
+"""
 
+import os
 from multiprocessing import Pool
-import quippy
-import click
+from subprocess import check_output
 from functools import partial
+
+import click
+from ase.io import read
+from tqdm import tqdm
+
+try:
+    import quippy
+except ImportError:
+    pass
 
 
 def _instance_method_alias(obj, arg):
     """
-    Alias for instance method that allows the method to be called in a 
+    Alias for instance method that allows the method to be called in a
     multiprocessing pool
     """
     res = obj.get_desc_wrap(arg)
     return res
 
 
-class Atoms2Soap(object):
+class Atoms2Soap:
     """
     Class for converting atoms to soap.
     Works with multiprocessing
     """
-
     def __init__(self, desc_dict):
         """
         Initialise the object
@@ -31,6 +41,7 @@ class Atoms2Soap(object):
 
     @property
     def desc_string(self):
+        """String for setting up the descriptor"""
         settings = []
         for key, value in self.desc_settings.items():
             if isinstance(value, (tuple, list)):
@@ -58,8 +69,8 @@ class Atoms2Soap(object):
         Wrapper to get_desc with single argument.
         Usefully for parallel processing
         """
-        n, atoms = args
-        return n, self.get_desc(atoms)
+        ndesc, atoms = args
+        return ndesc, self.get_desc(atoms)
 
     def get_desc(self, atoms):
         """
@@ -75,21 +86,22 @@ class Atoms2Soap(object):
 
 
 def save_file(savename, desc_arrays, info):
+    """
+    Save the computed descriptor array
+    """
     size = desc_arrays[0].size
-    with open(savename, 'w') as fh:
-        fh.write('{} {}\n'.format(len(desc_arrays), size))
+    with open(savename, 'w') as fhandle:
+        fhandle.write('{} {}\n'.format(len(desc_arrays), size))
         for desc in desc_arrays:
-            fh.write(' '.join(map(str, desc[0])) + '\n')
+            fhandle.write(' '.join(map(str, desc[0])) + '\n')
         for line in info:
-            fh.write(line + '\n')
+            fhandle.write(line + '\n')
 
 
 def get_res_paths(workdir=None):
     """
     Get the paths of the res files
     """
-    import os
-    from subprocess import check_output
     if workdir is None:
         workdir = './'
     output = check_output(['ca', '-v'], cwd=workdir).split(
@@ -103,6 +115,7 @@ def get_res_paths(workdir=None):
     return fnames, airss_info
 
 
+# pylint: disable=too-many-arguments
 @click.command(
     'res2soap',
     help=
@@ -119,16 +132,27 @@ def get_res_paths(workdir=None):
 @click.option('--cutoff', default=5)
 @click.option('--desc-kind', default='soap')
 @click.option('--atom-sigma', default=0.01)
-@click.option('--centre-z', '-z', required=True, type=int, multiple=True, help='Atomic numbers of the atoms that the local descriptor should be computed')
-@click.option('--species-z', '-sz', required=True, type=int, multiple=True, help='Atomic numbers of the enironment atoms that should be inlcuded')
+@click.option(
+    '--centre-z',
+    '-z',
+    required=True,
+    type=int,
+    multiple=True,
+    help=
+    'Atomic numbers of the atoms that the local descriptor should be computed')
+@click.option(
+    '--species-z',
+    '-sz',
+    required=True,
+    type=int,
+    multiple=True,
+    help='Atomic numbers of the enironment atoms that should be inlcuded')
 def res2soap(cutoff, workdir, l_max, n_max, atom_sigma, centre_z, nprocs,
              save_name, species_z, desc_kind):
     """
     Compute SOAP descriptors for res files, get the order or files from
     the `ca -v` commands for consistency.
     """
-    from ase.io import read
-    from tqdm import tqdm
     desc_settings = {
         'desc_kind': desc_kind,
         'cutoff': cutoff,
@@ -161,4 +185,5 @@ def res2soap(cutoff, workdir, l_max, n_max, atom_sigma, centre_z, nprocs,
 
 
 if __name__ == '__main__':
+    # pylint: disable=no-value-for-parameter
     res2soap()
