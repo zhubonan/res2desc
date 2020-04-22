@@ -22,5 +22,5 @@ setuptools.setup(
     python_requires='>=3.6',
     entry_points='''
         [console_scripts]
-        res2desc=res2desc:cli
+        res2soap=res2desc.cli:res2soap
     ''')
