@@ -1,7 +1,7 @@
-res2soap
+res2desc
 --------
 
-Tool to compute SOAP descriptors for a folder of `res` files.
+Compute descriptors for AIRSS style SHELX files
 
 Usage
 -----
@@ -37,7 +37,9 @@ Options:
 Requirement
 ------------
 
-Installation of `airss` and `quippy` packages.
+* `ase` for reading SHELX files
+* `quippy` for computing SOAP descriptors
+* `DScribe` for computing descriptors
 
 
 Testing
@@ -51,4 +53,8 @@ Limitations
 * Not able to output to STDOUT at the moment
 * Fast reader may be used for the `res` files to create `quippy.Atoms` objects directly.
 
+TODO
+----
 
+* Add support of  DScribe library
+* Allow computing more types of descriptors other than SOAP
