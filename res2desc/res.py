@@ -31,6 +31,7 @@ def read_res(lines):
                                 ([0-9\-\.]+)\s+
                                 ([0-9\-\.]+)""", re.VERBOSE)
     line_no = 0
+    title_items = []
     while line_no < len(lines):
         line = lines[line_no]
         tokens = line.split()
@@ -38,7 +39,8 @@ def read_res(lines):
             if tokens[0] == 'TITL':
                 # Skip the TITLE line, the information is not used
                 # in this package
-                pass
+                title_items = tokens[1:]
+
             elif tokens[0] == 'CELL' and len(tokens) == 8:
                 abc = [float(tok) for tok in tokens[2:5]]
                 ang = [float(tok) for tok in tokens[5:8]]
@@ -54,11 +56,11 @@ def read_res(lines):
                     line_no += 1  # Make sure the global is updated
         line_no += 1
 
-    return System(symbols=species,
-                  scaled_positions=coords,
-                  cell=cellpar_to_cell(list(abc) + list(ang)),
-                  pbc=True,
-                  info=info)
+    return title_items, System(symbols=species,
+                               scaled_positions=coords,
+                               cell=cellpar_to_cell(list(abc) + list(ang)),
+                               pbc=True,
+                               info=info)
 
 
 def read_stream(stream):
@@ -69,6 +71,7 @@ def read_stream(stream):
     lines = []
     atoms_list = []
     in_file = False
+    titl_list = []
     for line in stream:
         line = line.strip()
         # Skip any empty lines
@@ -77,11 +80,15 @@ def read_stream(stream):
         if 'TITL' in line:
             if in_file is True:
                 # read the current file
-                atoms_list.append(read_res(lines))
+                titl, atoms = read_res(lines)
+                titl_list.append(titl)
+                atoms_list.append(atoms)
                 lines = []
             in_file = True
         if in_file:
             lines.append(line.strip())
     # Reached the end parse the last file
-    atoms_list.append(read_res(lines))
-    return atoms_list
+    titl, atoms = read_res(lines)
+    titl_list.append(titl)
+    atoms_list.append(atoms)
+    return titl_list, atoms_list

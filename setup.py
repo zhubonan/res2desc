@@ -19,8 +19,9 @@ setuptools.setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
+    install_requires=['dscribe>=0.3.5', 'click>=7.0'],
     python_requires='>=3.6',
     entry_points='''
         [console_scripts]
-        res2soap=res2desc.cli:res2soap
+        res2soap=res2desc.cli:cli
     ''')
