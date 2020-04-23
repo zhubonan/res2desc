@@ -95,7 +95,7 @@ def cli(ctx, input_source, output, cryan, cryan_args):
     type=str,
     multiple=True,
     help=
-    'Centres where the descriptor should be computed. If not specified, defaults to all atomic sites'
+    'Centres where the descriptor should be computed. If not specified, defaults to all atomic sites. NOT IMPLEMENTED FOR NOW'
 )
 @click.option(
     '--average/--no-average',

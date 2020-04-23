@@ -4,42 +4,73 @@ Compute descriptors for AIRSS style SHELX files
 
 ## Usage
 
-Invoke by `python res2soap.py <FOLDER_NAME> OPTION`. At the moment you must pass the
-atomic number of the centre atoms (`-z`) and the environment atoms (`-sz`). Note that
-each option can be specified multiple times.
+Invoke by `cat *.res | res2desc soap`.
 
 You can get a list of options by passing `--help` flag.
 
 ```text
-Usage: res2soap.py [OPTIONS] WORKDIR
+Usage: res2desc [OPTIONS] COMMAND [ARGS]...
 
-  Compute descriptors of the results uisng the quippy package and output in
-  a cryan format (e.g the same as ca -v)
+  Commandline tool for converting SHELX files to descriptors
 
 Options:
-  -np, --nprocs INTEGER     Number of processes for parallelisation.
-  -s, --save-name TEXT      Save file name
+  --input-source FILENAME
+  --output FILENAME
+  --cryan / --no-cryan
+  --cryan-args TEXT        A string of the arges that should be passed to
+                           cryan, as if in the shell
+
+  --help                   Show this message and exit.
+
+Commands:
+  soap  Compute SOAP descriptors
+```
+
+### SOAP descriptors
+
+Again, help can be obtained using the `echo '' | res2desc soap --help` flag.
+Note that by default, `res2desc` take input from STDIN, so you have to use `echo`
+to obtain the help string (subject to change in the future).
+
+```text
+Usage: res2desc soap [OPTIONS]
+
+  Compute SOAP descriptors
+
+Options:
+  -np, --nprocs INTEGER         Number of processes for parallelisation.
   --l-max INTEGER
   --n-max INTEGER
   --cutoff INTEGER
-  --desc-kind TEXT
   --atom-sigma FLOAT
-  -z, --centre-z INTEGER    Atomic numbers of the atoms that the local
-                            descriptor should be computed  [required]
-  -sz, --species-z INTEGER  Atomic numbers of the enironment atoms that should
-                            be inlcuded  [required]
-  --help                    Show this message and exit.
+  --crossover / --no-crossover  Whether do the crossover for multiple species
+  -sn, --species-names TEXT     Symbols of all species to be considered,
+                                should be a list
+
+  -cn, --centres-name TEXT      Centres where the descriptor should be
+                                computed. If not specified, defaults to all
+                                atomic sites
+
+  --average / --no-average      Averaging descriptors for each structrure,
+                                rather than output those for individual sites.
+
+  --periodic / --no-periodic    Whether assuming periodic boundary conditions
+                                or not
+
+  --help                        Show this message and exit.
 ```
 
 ## Requirement
 
-* `ase` for reading SHELX files
-* `quippy` for computing SOAP descriptors
 * `DScribe` for computing descriptors
+* `click` for commandline interface
 
 ## Testing
 
-Type `pytest`!
+```text
+git clone git@github.com:zhubonan/res2desc.git
+pytest ./res2desc
+```
 
 ## Limitations
 
