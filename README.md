@@ -2,6 +2,13 @@
 
 Compute descriptors for AIRSS style SHELX files
 
+## Installation
+
+```text
+git clone git@github.com:zhubonan/res2desc.git
+pip install -e ./res2desc
+```
+
 ## Usage
 
 Invoke by `cat *.res | res2desc soap`.

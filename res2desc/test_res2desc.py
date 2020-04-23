@@ -94,6 +94,7 @@ def test_soap_avg(cu_atoms):
 def test_command(res_files_handle):
     """Test the commandline interface"""
     runner = CliRunner()
-    result = runner.invoke(cli, ['soap'], input=res_files_handle.read())
+    result = runner.invoke(cli, ['--no-cryan', 'soap'],
+                           input=res_files_handle.read())
     res_files_handle.close()
     assert result.exit_code == 0

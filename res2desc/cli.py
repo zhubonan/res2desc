@@ -1,6 +1,7 @@
 """
 Module containing the commandline interface
 """
+# pylint: disable=too-many-locals
 import io
 import subprocess
 
@@ -11,12 +12,23 @@ from res2desc import Atoms2Soap
 from res2desc.res import read_stream
 
 
-def cryan_out_adaptor(output, titl_list, desc_list):
+def cryan_out_adaptor(output, titl_list, desc_list, cryan_style):
     """Adapt the computed descriptors to the cryan style"""
-    for titl, desc in zip(titl_list, desc_list):
-        np.savetxt(output, desc, newline='\t', fmt='%0.6G')
-        output.write('\n')
-        output.write(titl)
+    nelem = desc_list.shape[1]
+    if cryan_style == 2:
+        for titl, desc in zip(titl_list, desc_list):
+            output.write(f'{nelem:d}\t')
+            np.savetxt(output, desc, newline='\t', fmt='%0.6G')
+            output.write('\n')
+            output.write(titl)
+    elif cryan_style == 1:
+        for titl, desc in zip(titl_list, desc_list):
+            output.write(f'{nelem:d}\n')
+            np.savetxt(output, desc, newline='\t', fmt='%0.6G')
+            output.write('\n')
+            output.write(titl)
+    else:
+        raise RuntimeError(f'Unknown cryan style {cryan_style}')
 
 
 def process_titl_list(titl_list, atoms_list):
@@ -24,29 +36,49 @@ def process_titl_list(titl_list, atoms_list):
     out_list = []
     for titl, atom in zip(titl_list, atoms_list):
         out_list.append('\t'.join([
-            titl[0], titl[6],
+            titl[0],
+            titl[6],
             atom.get_chemical_formula(mode='hill', empirical=True),
-            titl[7].replace('(', "\"").replace(')', "\""), titl[-1]
+            titl[7].replace('(', "\"").replace(')', "\""),
+            titl[-1],
+            titl[2],
+            titl[3],
         ]) + '\n')
     return out_list
 
 
 @click.group('res2desc',
              help='Commandline tool for converting SHELX files to descriptors')
-@click.option('--input-source', type=click.File('r'), default='-')
-@click.option('--output', type=click.File('w'), default='-')
+@click.option('--input-source',
+              type=click.File('r'),
+              default='-',
+              show_default='STDIN')
+@click.option('--output',
+              type=click.File('w'),
+              default='-',
+              show_default='STDOUT')
 @click.option('--cryan/--no-cryan',
               default=True,
+              show_default=True,
               help=('Call cryan internally to obtain fully compatible output. '
                     'Should be disabled if cryan is not avaliable.'))
+@click.option(
+    '--cryan-style',
+    help=
+    'Style of the cryan output, 1 for 3 lines for structure, 2 for 2 lines per structure',
+    default=1,
+    type=int,
+    show_default=True,
+)
 @click.option(
     '--cryan-args',
     type=str,
     default='-v -dr 0',
+    show_default=True,
     help=
     'A string of the arges that should be passed to cryan, as if in the shell')
 @click.pass_context
-def cli(ctx, input_source, output, cryan, cryan_args):
+def cli(ctx, input_source, output, cryan, cryan_args, cryan_style):
     """
     Top level command, handles input_source and output streams
     """
@@ -64,13 +96,28 @@ def cli(ctx, input_source, output, cryan, cryan_args):
                                 stdout=subprocess.PIPE,
                                 text=True)
         ops, _ = subp.communicate(inp.read())
-        titl_lines = ops.split('\n')[1::2]
+        if cryan_style == 1:
+            titl_lines = ops.splitlines(keepends=True)[2::3]
+        elif cryan_style == 2:
+            titl_lines = ops.splitlines(keepends=True)[1::2]
+        else:
+            raise RuntimeError(f'Unkown cryan style: {cryan_style}')
+        # Check title
+        if len(titl_lines[0].split()) != 7:
+            raise RuntimeError(
+                'Ill formated cryan input detected. Terminating.')
         inp.seek(0)
         ctx.obj['input_source'] = inp
         ctx.obj['titl_lines'] = titl_lines
+        titl_list, atoms_list = read_stream(inp)
     else:
         ctx.obj['input_source'] = input_source
         ctx.obj['titl_lines'] = None
+        titl_list, atoms_list = read_stream(input_source)
+
+    ctx.obj['titl_list'] = titl_list
+    ctx.obj['atoms_list'] = atoms_list
+    ctx.obj['cryan_style'] = cryan_style
 
 
 # pylint: disable=too-many-arguments
@@ -79,12 +126,13 @@ def cli(ctx, input_source, output, cryan, cryan_args):
               '-np',
               help='Number of processes for parallelisation.',
               default=1)
-@click.option('--l-max', default=4)
-@click.option('--n-max', default=8)
-@click.option('--cutoff', default=5)
-@click.option('--atom-sigma', default=0.01)
+@click.option('--l-max', default=4, show_default=True)
+@click.option('--n-max', default=8, show_default=True)
+@click.option('--cutoff', default=5, show_default=True)
+@click.option('--atom-sigma', default=0.01, show_default=True)
 @click.option('--crossover/--no-crossover',
               default=True,
+              show_default=True,
               help='Whether do the crossover for multiple species')
 @click.option('--species-names',
               '-sn',
@@ -103,11 +151,13 @@ def cli(ctx, input_source, output, cryan, cryan_args):
 @click.option(
     '--average/--no-average',
     default=True,
+    show_default=True,
     help=
     'Averaging descriptors for each structrure, rather than output those for individual sites.'
 )
 @click.option('--periodic/--no-periodic',
               default=True,
+              show_default=True,
               help='Whether assuming periodic boundary conditions or not')
 @click.pass_context
 #  # pylint: disable=unused-argument
@@ -117,8 +167,8 @@ def cmd_soap(ctx, cutoff, l_max, n_max, atom_sigma, nprocs, centres_name,
     Compute SOAP descriptors for res files, get the order or files from
     the `ca -v` commands for consistency.
     """
-    click.echo('Reading res files', err=True)
-    titl_list, atoms_list = read_stream(ctx.obj['input_source'])
+    titl_list, atoms_list = ctx.obj['titl_list'], ctx.obj['atoms_list']
+    cryan_style = ctx.obj['cryan_style']
     if not species_names:
         species_names = set()
         for atoms in atoms_list:
@@ -141,7 +191,7 @@ def cmd_soap(ctx, cutoff, l_max, n_max, atom_sigma, nprocs, centres_name,
     descs = comp.get_desc(atoms_list, nprocs)
     output = ctx.obj['output']
     # Process the tilt_lines
-    titl_lines = ctx.obj.get('title_lines')
+    titl_lines = ctx.obj.get('titl_lines')
     if titl_lines is None:
         titl_lines = process_titl_list(titl_list, atoms_list)
-    cryan_out_adaptor(output, titl_lines, descs)
+    cryan_out_adaptor(output, titl_lines, descs, cryan_style)
