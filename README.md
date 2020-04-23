@@ -16,7 +16,10 @@ Usage: res2desc [OPTIONS] COMMAND [ARGS]...
 Options:
   --input-source FILENAME
   --output FILENAME
-  --cryan / --no-cryan
+  --cryan / --no-cryan     Call cryan internally to obtain fully compatible
+                           output. Should be disabled if cryan is not
+                           avaliable.
+
   --cryan-args TEXT        A string of the arges that should be passed to
                            cryan, as if in the shell
 
@@ -25,6 +28,9 @@ Options:
 Commands:
   soap  Compute SOAP descriptors
 ```
+
+Note that `input-source` and `output` default to STDIN and STDOUT by default, but you can still
+specify file names.
 
 ### SOAP descriptors
 
@@ -74,10 +80,11 @@ pytest ./res2desc
 
 ## Limitations
 
-* Not able to output to STDOUT at the moment
-* Fast reader may be used for the `res` files to create `quippy.Atoms` objects directly.
+* Only SOAP is implemented at the moment
+* Filtering species is not avaliable for now
+* Descripters are only computed once all files are read, this could cause problems for large number of input structures
 
 ## TODO
 
-* Add support of  DScribe library
 * Allow computing more types of descriptors other than SOAP
+* Allow buffering input structures and avoid stressing the memory

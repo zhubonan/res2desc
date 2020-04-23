@@ -35,7 +35,10 @@ def process_titl_list(titl_list, atoms_list):
              help='Commandline tool for converting SHELX files to descriptors')
 @click.option('--input-source', type=click.File('r'), default='-')
 @click.option('--output', type=click.File('w'), default='-')
-@click.option('--cryan/--no-cryan', default=True)
+@click.option('--cryan/--no-cryan',
+              default=True,
+              help=('Call cryan internally to obtain fully compatible output. '
+                    'Should be disabled if cryan is not avaliable.'))
 @click.option(
     '--cryan-args',
     type=str,
