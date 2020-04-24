@@ -31,5 +31,3 @@ jobs:
       run: |
         pip install pytest
         pytest
-    - name: Prospector Check
-      uses: jpetrucciani/prospector-check@1.2.0
