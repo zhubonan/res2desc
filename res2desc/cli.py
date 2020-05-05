@@ -16,13 +16,13 @@ from res2desc.res import read_stream
 def cryan_out_adaptor(output, titl_list, desc_list, cryan_style):
     """Adapt the computed descriptors to the cryan style"""
     nelem = desc_list.shape[1]
-    if cryan_style == 2:
+    if cryan_style == '2':
         for titl, desc in zip(titl_list, desc_list):
             output.write(f'{nelem:d}\t')
             np.savetxt(output, desc, newline='\t', fmt='%0.6G')
             output.write('\n')
             output.write(titl)
-    elif cryan_style == 1:
+    elif cryan_style == '1':
         for titl, desc in zip(titl_list, desc_list):
             output.write(f'{nelem:d}\n')
             np.savetxt(output, desc, newline='\t', fmt='%0.6G')
@@ -68,9 +68,9 @@ def process_titl_list(titl_list, atoms_list):
 @click.option(
     '--cryan-style',
     help=
-    'Style of the cryan output, 1 for 3 lines for structure, 2 for 2 lines per structure',
-    default=1,
-    type=int,
+    'Style of the cryan output, 1 for 3 lines for structure, 2 for 2 lines per structure. Automatically fallback to 1 if 2 does not work.',
+    default='2',
+    type=click.Choice(['1', '2']),
     show_default=True,
 )
 @click.option(
@@ -99,16 +99,22 @@ def cli(ctx, input_source, output, cryan, cryan_args, cryan_style):
                                 stdout=subprocess.PIPE,
                                 text=True)
         ops, _ = subp.communicate(inp.read())
-        if cryan_style == 1:
-            titl_lines = ops.splitlines(keepends=True)[2::3]
-        elif cryan_style == 2:
-            titl_lines = ops.splitlines(keepends=True)[1::2]
-        else:
+        if cryan_style not in ('1', '2'):
             raise RuntimeError(f'Unkown cryan style: {cryan_style}')
-        # Check title
+        # First try style == 2, this is the standard cryan
+        if cryan_style == '2':
+            titl_lines = ops.splitlines(keepends=True)[1::2]
+            # If it does not work, we try style == 1, this is the
+            # style Ben describe with 3 lines per structure
+            if len(titl_lines[0].split()) != 7:
+                cryan_style = '1'
+        if cryan_style == '1':
+            titl_lines = ops.splitlines(keepends=True)[2::3]
+        # Check titl again
         if len(titl_lines[0].split()) != 7:
             raise RuntimeError(
                 'Ill formated cryan input detected. Terminating.')
+        # Reset the input stream
         inp.seek(0)
         ctx.obj['input_source'] = inp
         ctx.obj['titl_lines'] = titl_lines
