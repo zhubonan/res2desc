@@ -5,6 +5,7 @@ Module containing the commandline interface
 import io
 import subprocess
 
+from ase.io.xyz import write_xyz
 import numpy as np
 import click
 
@@ -49,11 +50,13 @@ def process_titl_list(titl_list, atoms_list):
 
 @click.group('res2desc',
              help='Commandline tool for converting SHELX files to descriptors')
-@click.option('--input-source',
+@click.option('--input_source',
+              '-in',
               type=click.File('r'),
               default='-',
               show_default='STDIN')
 @click.option('--output',
+              '-out',
               type=click.File('w'),
               default='-',
               show_default='STDOUT')
@@ -129,7 +132,7 @@ def cli(ctx, input_source, output, cryan, cryan_args, cryan_style):
 @click.option('--l-max', default=4, show_default=True)
 @click.option('--n-max', default=8, show_default=True)
 @click.option('--cutoff', default=5, show_default=True)
-@click.option('--atom-sigma', default=0.01, show_default=True)
+@click.option('--atom-sigma', default=0.1, show_default=True)
 @click.option('--crossover/--no-crossover',
               default=True,
               show_default=True,
@@ -195,3 +198,48 @@ def cmd_soap(ctx, cutoff, l_max, n_max, atom_sigma, nprocs, centres_name,
     if titl_lines is None:
         titl_lines = process_titl_list(titl_list, atoms_list)
     cryan_out_adaptor(output, titl_lines, descs, cryan_style)
+
+
+@cli.command('xyz', help='Create concatenated xyz files')
+@click.option('--label-file', help='Filename for writing out the labels')
+@click.option('--label-style',
+              help='Style of the labels',
+              type=click.Choice(['label', 'short_label', 'short_symm',
+                                 'symm']),
+              default='label')
+@click.pass_context
+def cmd_xyz(ctx, label_file, label_style):
+    """
+    Commandline tool for creating a concatenated xyz files from res
+    also, the labels for each strucure is saved
+    """
+    titl_list, atoms_list = ctx.obj['titl_list'], ctx.obj['atoms_list']
+    output = ctx.obj['output']
+    # Write the xyz files
+    write_xyz(output, atoms_list)
+
+    # Write the label file
+    if label_file:
+        if label_style == 'label':
+            label_str = [titl[0] for titl in titl_list]
+        elif label_style == 'short_label':
+            label_str = [shorten_titl(titl[0]) for titl in titl_list]
+        elif label_style == 'short_symm':
+            label_str = [
+                shorten_titl(titl[0]) + '-' + titl[7] for titl in titl_list
+            ]
+        elif label_style == 'symm':
+            label_str = [titl[7] for titl in titl_list]
+        with open(label_file, 'w') as fhandle:
+            for line in label_str:
+                fhandle.write(line + '\n')
+
+
+def shorten_titl(str_in, nout=5):
+    """Shorten the title with *, so it can still be matched by
+    glob"""
+    if len(str_in) > nout * 2:
+        str_out = str_in[:5] + '*' + str_in[-5:]
+    else:
+        str_out = str_in
+    return str_out
