@@ -50,11 +50,13 @@ def process_titl_list(titl_list, atoms_list):
 
 @click.group('res2desc',
              help='Commandline tool for converting SHELX files to descriptors')
-@click.option('--input_source',
-              '-in',
-              type=click.File('r'),
-              default='-',
-              show_default=True)
+@click.option(
+    '--input_source',
+    '-in',
+    type=click.File('r'),
+    default='-',
+    show_default='STDIN',
+)
 @click.option('--output',
               '-out',
               type=click.File('w'),

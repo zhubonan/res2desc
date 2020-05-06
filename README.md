@@ -86,10 +86,9 @@ Options:
 ### xyz output
 
 Concatenate all structures in the xyz format, and write the labels in separate files.
-This can be used when using ASAP for analysing AIRSS search results.
+This can be used when using [ASAP](https://github.com/BingqingCheng/ASAP) for analysing AIRSS search results.
 
 ```text
-e=spin --label-file=test --help
 Usage: res2desc xyz [OPTIONS]
 
   Create concatenated xyz files
