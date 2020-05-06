@@ -37,13 +37,13 @@ def process_titl_list(titl_list, atoms_list):
     out_list = []
     for titl, atom in zip(titl_list, atoms_list):
         out_list.append('\t'.join([
-            titl[0],
-            titl[6],
+            titl.label,
+            str(titl.natoms),
             atom.get_chemical_formula(mode='hill', empirical=True),
-            titl[7].replace('(', "\"").replace(')', "\""),
-            titl[-1],
-            titl[2],
-            titl[3],
+            titl.symm.replace('(', "\"").replace(')', "\""),
+            titl.flag3,
+            str(titl.volume),
+            str(titl.enthalpy),
         ]) + '\n')
     return out_list
 
@@ -54,7 +54,7 @@ def process_titl_list(titl_list, atoms_list):
               '-in',
               type=click.File('r'),
               default='-',
-              show_default='STDIN')
+              show_default=True)
 @click.option('--output',
               '-out',
               type=click.File('w'),
@@ -90,35 +90,25 @@ def cli(ctx, input_source, output, cryan, cryan_args, cryan_style):
     # Check if using cryan compatible mode
     if cryan is True:
         # Read all input_source in a buffer
-        inp = io.StringIO()
-        inp.write(input_source.read())
-        inp.seek(0)
-        cryan_args = cryan_args.split()
-        subp = subprocess.Popen(['cryan', *cryan_args],
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                text=True)
-        ops, _ = subp.communicate(inp.read())
-        if cryan_style not in ('1', '2'):
-            raise RuntimeError(f'Unkown cryan style: {cryan_style}')
-        # First try style == 2, this is the standard cryan
-        if cryan_style == '2':
-            titl_lines = ops.splitlines(keepends=True)[1::2]
-            # If it does not work, we try style == 1, this is the
-            # style Ben describe with 3 lines per structure
-            if len(titl_lines[0].split()) != 7:
-                cryan_style = '1'
-        if cryan_style == '1':
-            titl_lines = ops.splitlines(keepends=True)[2::3]
-        # Check titl again
-        if len(titl_lines[0].split()) != 7:
-            raise RuntimeError(
-                'Ill formated cryan input detected. Terminating.')
-        # Reset the input stream
-        inp.seek(0)
+        if input_source.name == '<stdin>':
+            if input_source.isatty():
+                # nothing in stdin
+                titl_lines = []
+                titl_list = []
+                atoms_list = []
+                inp = None
+            else:
+                # Reading from stdin
+                inp, titl_lines, titl_list, atoms_list = read_with_cryan(
+                    input_source, cryan_args, cryan_style)
+
+        else:
+            # Reading from file
+            inp, titl_lines, titl_list, atoms_list = read_with_cryan(
+                input_source, cryan_args, cryan_style)
+    # Reset the input stream
         ctx.obj['input_source'] = inp
         ctx.obj['titl_lines'] = titl_lines
-        titl_list, atoms_list = read_stream(inp)
     else:
         ctx.obj['input_source'] = input_source
         ctx.obj['titl_lines'] = None
@@ -127,6 +117,41 @@ def cli(ctx, input_source, output, cryan, cryan_args, cryan_style):
     ctx.obj['titl_list'] = titl_list
     ctx.obj['atoms_list'] = atoms_list
     ctx.obj['cryan_style'] = cryan_style
+
+
+def read_with_cryan(input_source, cryan_args, cryan_style):
+    """Read stuff with cryan from a source
+    :param input_source: file object to be read.
+    :returns: a list of [inp, titl_lines, titl_list, atoms_list]"""
+    inp = io.StringIO()
+    inp.write(input_source.read())
+    # We are getting piped inputs
+    inp.seek(0)
+    cryan_args = cryan_args.split()
+    subp = subprocess.Popen(['cryan', *cryan_args],
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            text=True)
+    ops, _ = subp.communicate(inp.read())
+    inp.seek(0)
+    if cryan_style not in ('1', '2'):
+        raise RuntimeError(f'Unkown cryan style: {cryan_style}')
+    # First try style == 2, this is the standard cryan
+    if cryan_style == '2':
+        titl_lines = ops.splitlines(keepends=True)[1::2]
+        # If it does not work, we try style == 1, this is the
+        # style Ben describe with 3 lines per structure
+        if len(titl_lines[0].split()) != 7:
+            cryan_style = '1'
+    if cryan_style == '1':
+        titl_lines = ops.splitlines(keepends=True)[2::3]
+    # Check titl again
+    if len(titl_lines[0].split()) != 7:
+        raise RuntimeError('Ill formated cryan input detected. Terminating.')
+    titl_list, atoms_list = read_stream(inp)
+    # Reset the buffer
+    inp.seek(0)
+    return inp, titl_lines, titl_list, atoms_list
 
 
 # pylint: disable=too-many-arguments
@@ -202,6 +227,7 @@ def cmd_soap(ctx, cutoff, l_max, n_max, atom_sigma, nprocs, centres_name,
     # Process the tilt_lines
     titl_lines = ctx.obj.get('titl_lines')
     if titl_lines is None:
+        # Not read from cryan, contruct these lines here
         titl_lines = process_titl_list(titl_list, atoms_list)
     cryan_out_adaptor(output, titl_lines, descs, cryan_style)
 
@@ -210,8 +236,10 @@ def cmd_soap(ctx, cutoff, l_max, n_max, atom_sigma, nprocs, centres_name,
 @click.option('--label-file', help='Filename for writing out the labels')
 @click.option('--label-style',
               help='Style of the labels',
-              type=click.Choice(['label', 'short_label', 'short_symm',
-                                 'symm']),
+              type=click.Choice([
+                  'label', 'short_label', 'short_symm', 'symm', 'enthalpy',
+                  'volume', 'spin', 'spin_abs', 'pressure'
+              ]),
               default='label')
 @click.pass_context
 def cmd_xyz(ctx, label_file, label_style):
@@ -227,15 +255,30 @@ def cmd_xyz(ctx, label_file, label_style):
     # Write the label file
     if label_file:
         if label_style == 'label':
-            label_str = [titl[0] for titl in titl_list]
+            label_str = [titl.label for titl in titl_list]
         elif label_style == 'short_label':
-            label_str = [shorten_titl(titl[0]) for titl in titl_list]
+            label_str = [shorten_titl(titl.label) for titl in titl_list]
         elif label_style == 'short_symm':
             label_str = [
-                shorten_titl(titl[0]) + '-' + titl[7] for titl in titl_list
+                shorten_titl(titl.label) + '-' + titl.symm
+                for titl in titl_list
             ]
         elif label_style == 'symm':
-            label_str = [titl[7] for titl in titl_list]
+            label_str = [titl.symm for titl in titl_list]
+        elif label_style == 'enthalpy':
+            label_str = [
+                str(titl.enthalpy / titl.natoms) for titl in titl_list
+            ]
+        elif label_style == 'volume':
+            label_str = [str(titl.volume / titl.natoms) for titl in titl_list]
+        elif label_style == 'pressure':
+            label_str = [str(titl.pressure) for titl in titl_list]
+        elif label_style == 'spin':
+            label_str = [str(titl.spin / titl.natoms) for titl in titl_list]
+        elif label_style == 'spin_abs':
+            label_str = [
+                str(titl.spin_abs / titl.natoms) for titl in titl_list
+            ]
         with open(label_file, 'w') as fhandle:
             for line in label_str:
                 fhandle.write(line + '\n')
