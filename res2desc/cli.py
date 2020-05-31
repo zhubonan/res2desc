@@ -1,7 +1,7 @@
 """
 Module containing the commandline interface
 """
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals,import-outside-toplevel
 import io
 import subprocess
 
@@ -236,54 +236,42 @@ def cmd_soap(ctx, cutoff, l_max, n_max, atom_sigma, nprocs, centres_name,
 
 @cli.command('xyz', help='Create concatenated xyz files')
 @click.option('--label-file', help='Filename for writing out the labels')
-@click.option('--label-style',
-              help='Style of the labels',
-              type=click.Choice([
-                  'label', 'short_label', 'short_symm', 'symm', 'enthalpy',
-                  'volume', 'spin', 'spin_abs', 'pressure'
-              ]),
-              default='label')
 @click.pass_context
-def cmd_xyz(ctx, label_file, label_style):
+def cmd_xyz(ctx, label_file):
     """
     Commandline tool for creating a concatenated xyz files from res
     also, the labels for each strucure is saved
     """
     titl_list, atoms_list = ctx.obj['titl_list'], ctx.obj['atoms_list']
     output = ctx.obj['output']
+    # Setup info for atoms
+    for atoms, titl in zip(atoms_list, titl_list):
+        atoms.info['label'] = titl.label
+        atoms.info['enthalpy'] = titl.enthalpy
+        atoms.info['pressure'] = titl.pressure
+        atoms.info['symmetry'] = titl.symm
+
     # Write the xyz files
     write_xyz(output, atoms_list)
 
     # Write the label file
+    from tabulate import tabulate
     if label_file:
-        if label_style == 'label':
-            label_str = [titl.label for titl in titl_list]
-        elif label_style == 'short_label':
-            label_str = [shorten_titl(titl.label) for titl in titl_list]
-        elif label_style == 'short_symm':
-            label_str = [
-                shorten_titl(titl.label) + '-' + titl.symm
-                for titl in titl_list
-            ]
-        elif label_style == 'symm':
-            label_str = [titl.symm for titl in titl_list]
-        elif label_style == 'enthalpy':
-            label_str = [
-                str(titl.enthalpy / titl.natoms) for titl in titl_list
-            ]
-        elif label_style == 'volume':
-            label_str = [str(titl.volume / titl.natoms) for titl in titl_list]
-        elif label_style == 'pressure':
-            label_str = [str(titl.pressure) for titl in titl_list]
-        elif label_style == 'spin':
-            label_str = [str(titl.spin / titl.natoms) for titl in titl_list]
-        elif label_style == 'spin_abs':
-            label_str = [
-                str(titl.spin_abs / titl.natoms) for titl in titl_list
-            ]
+        data = [[
+            'label', 'natoms', 'enthalpy', 'volume', 'pressure', 'symmetry'
+        ]]
+        for titl in titl_list:
+            data.append([
+                titl.label, titl.natoms, titl.enthalpy / titl.natoms,
+                titl.volume / titl.natoms, titl.spin / titl.natoms,
+                titl.pressure, titl.symm
+            ])
+
+        content = tabulate(data, headers='firstrow', tablefmt='plain')
+
         with open(label_file, 'w') as fhandle:
-            for line in label_str:
-                fhandle.write(line + '\n')
+            fhandle.write('#')
+            fhandle.write(content)
 
 
 def shorten_titl(str_in, nout=5):

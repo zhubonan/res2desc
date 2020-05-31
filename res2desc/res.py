@@ -6,7 +6,7 @@ import re
 from functools import namedtuple
 
 from ase.geometry import cellpar_to_cell
-from dscribe.core.system import System
+from ase import Atoms
 
 # TITL 2LFP-11212-7612-5 -0.0373 309.998985 -1.21516192E+004 16.0000 16.2594 28 (P-1) n - 1
 #              0             1        2            3             4       5    6   7   8 9 10
@@ -82,11 +82,11 @@ def read_res(lines):
                     line_no += 1  # Make sure the global is updated
         line_no += 1
 
-    return title_items, System(symbols=species,
-                               scaled_positions=coords,
-                               cell=cellpar_to_cell(list(abc) + list(ang)),
-                               pbc=True,
-                               info=info)
+    return title_items, Atoms(symbols=species,
+                              scaled_positions=coords,
+                              cell=cellpar_to_cell(list(abc) + list(ang)),
+                              pbc=True,
+                              info=info)
 
 
 def read_stream(stream):
