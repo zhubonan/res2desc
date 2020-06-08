@@ -106,6 +106,12 @@ Options:
 
 ```
 
+### Tab completion
+
+Source the script in `scripts/res2desc_active.sh` to enable tab-completion. It can be place the file at
+`$CONDA_PREFIX/etc/conda/activate.d/` to have it sourced upon environment activation. You may have to
+create the direction if it does not exit.
+
 ## Requirement
 
 * `DScribe` for computing descriptors
