@@ -1,7 +1,7 @@
 """
 Module containing the commandline interface
 """
-# pylint: disable=too-many-locals,import-outside-toplevel
+# pylint: disable=too-many-locals,import-outside-toplevel, too-many-arguments
 import io
 import subprocess
 
@@ -41,9 +41,9 @@ def process_titl_list(titl_list, atoms_list):
             str(titl.natoms),
             atom.get_chemical_formula(mode='hill', empirical=True),
             titl.symm.replace('(', "\"").replace(')', "\""),
-            titl.flag3,
             str(titl.volume),
             str(titl.enthalpy),
+            titl.flag3,  # Number of times found
         ]) + '\n')
     return out_list
 
@@ -68,10 +68,18 @@ def process_titl_list(titl_list, atoms_list):
               help=('Call cryan internally to obtain fully compatible output. '
                     'Should be disabled if cryan is not avaliable.'))
 @click.option(
-    '--cryan-style',
+    '--cryan-style-in',
     help=
-    'Style of the cryan output, 1 for 3 lines for structure, 2 for 2 lines per structure. Automatically fallback to 1 if 2 does not work.',
+    'Style of the cryan input, 1 for 3 lines for structure, 2 for 2 lines per structure. Automatically fallback to 1 if 2 does not work.',
     default='2',
+    type=click.Choice(['1', '2']),
+    show_default=True,
+)
+@click.option(
+    '--cryan-style-out',
+    help=
+    'Style of the cryan output, 1 for 3 lines for structure, 2 for 2 lines per structure. Default to 3 lines for compatibility with SHEAP',
+    default='1',
     type=click.Choice(['1', '2']),
     show_default=True,
 )
@@ -83,7 +91,8 @@ def process_titl_list(titl_list, atoms_list):
     help=
     'A string of the arges that should be passed to cryan, as if in the shell')
 @click.pass_context
-def cli(ctx, input_source, output, cryan, cryan_args, cryan_style):
+def cli(ctx, input_source, output, cryan, cryan_args, cryan_style_in,
+        cryan_style_out):
     """
     Top level command, handles input_source and output streams
     """
@@ -102,12 +111,12 @@ def cli(ctx, input_source, output, cryan, cryan_args, cryan_style):
             else:
                 # Reading from stdin
                 inp, titl_lines, titl_list, atoms_list = read_with_cryan(
-                    input_source, cryan_args, cryan_style)
+                    input_source, cryan_args, cryan_style_in)
 
         else:
             # Reading from file
             inp, titl_lines, titl_list, atoms_list = read_with_cryan(
-                input_source, cryan_args, cryan_style)
+                input_source, cryan_args, cryan_style_in)
     # Reset the input stream
         ctx.obj['input_source'] = inp
         ctx.obj['titl_lines'] = titl_lines
@@ -118,7 +127,7 @@ def cli(ctx, input_source, output, cryan, cryan_args, cryan_style):
 
     ctx.obj['titl_list'] = titl_list
     ctx.obj['atoms_list'] = atoms_list
-    ctx.obj['cryan_style'] = cryan_style
+    ctx.obj['cryan_style_out'] = cryan_style_out
 
 
 def read_with_cryan(input_source, cryan_args, cryan_style):
@@ -204,7 +213,7 @@ def cmd_soap(ctx, cutoff, l_max, n_max, atom_sigma, nprocs, centres_name,
     the `ca -v` commands for consistency.
     """
     titl_list, atoms_list = ctx.obj['titl_list'], ctx.obj['atoms_list']
-    cryan_style = ctx.obj['cryan_style']
+    cryan_style = ctx.obj['cryan_style_out']
     if not species_names:
         species_names = set()
         for atoms in atoms_list:
