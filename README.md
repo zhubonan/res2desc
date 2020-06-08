@@ -5,9 +5,10 @@ Compute descriptors for AIRSS style SHELX files
 ## Installation
 
 ```text
-git clone git@github.com:zhubonan/res2desc.git
+git clone https://github.com/zhubonan/res2desc.git
 pip install -e ./res2desc
 ```
+Note, it is best to install inside a python virtual environment, such as those managed by [conda](https://docs.conda.io/en/latest/index.html).
 
 ## Usage
 
