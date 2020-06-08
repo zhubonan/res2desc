@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='res2desc',  # Replace with your own username
-    version='0.0.1',
+    version='0.1.0',
     author='Bonan Zhu',
     author_email='zhubonan@outlook.com',
     description=

@@ -3,6 +3,8 @@ Converting from RES to SOAP
 """
 from dscribe.descriptors import SOAP
 
+__version__ = 'v0.1.0'
+
 
 def _instance_method_alias(obj, arg):
     """
