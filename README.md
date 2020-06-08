@@ -21,16 +21,21 @@ Usage: res2desc [OPTIONS] COMMAND [ARGS]...
   Commandline tool for converting SHELX files to descriptors
 
 Options:
-  -in, --input_source FILENAME  [default: -]
+  -in, --input_source FILENAME  [default: (STDIN)]
   -out, --output FILENAME       [default: (STDOUT)]
   --cryan / --no-cryan          Call cryan internally to obtain fully
                                 compatible output. Should be disabled if cryan
                                 is not avaliable.  [default: True]
 
-  --cryan-style [1|2]           Style of the cryan output, 1 for 3 lines for
+  --cryan-style-in [1|2]        Style of the cryan input, 1 for 3 lines for
                                 structure, 2 for 2 lines per structure.
                                 Automatically fallback to 1 if 2 does not
                                 work.  [default: 2]
+
+  --cryan-style-out [1|2]       Style of the cryan output, 1 for 3 lines for
+                                structure, 2 for 2 lines per structure.
+                                Default to 3 lines for compatibility with
+                                SHEAP  [default: 1]
 
   --cryan-args TEXT             A string of the arges that should be passed to
                                 cryan, as if in the shell  [default: -v -dr 0]
