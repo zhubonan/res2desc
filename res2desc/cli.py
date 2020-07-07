@@ -5,6 +5,7 @@ Module containing the commandline interface
 import io
 import subprocess
 
+import pandas as pd
 from ase.io.xyz import write_xyz
 import numpy as np
 import click
@@ -244,7 +245,11 @@ def cmd_soap(ctx, cutoff, l_max, n_max, atom_sigma, nprocs, centres_name,
 
 
 @cli.command('xyz', help='Create concatenated xyz files')
-@click.option('--label-file', help='Filename for writing out the labels')
+@click.option(
+    '--label-file',
+    help=
+    'Filename for writing out the labels. CSV will be use if the file name has the right suffix.'
+)
 @click.pass_context
 def cmd_xyz(ctx, label_file):
     """
@@ -272,15 +277,18 @@ def cmd_xyz(ctx, label_file):
         for titl in titl_list:
             data.append([
                 titl.label, titl.natoms, titl.enthalpy / titl.natoms,
-                titl.volume / titl.natoms, titl.spin / titl.natoms,
-                titl.pressure, titl.symm
+                titl.volume / titl.natoms, titl.pressure, titl.symm
             ])
 
-        content = tabulate(data, headers='firstrow', tablefmt='plain')
+        if label_file.endswith('.csv'):
+            dataframe = pd.DataFrame(data[1:], columns=data[0])
+            dataframe.to_csv(label_file, index=False)
+        else:
+            content = tabulate(data, headers='firstrow', tablefmt='plain')
 
-        with open(label_file, 'w') as fhandle:
-            fhandle.write('#')
-            fhandle.write(content)
+            with open(label_file, 'w') as fhandle:
+                fhandle.write('#')
+                fhandle.write(content)
 
 
 def shorten_titl(str_in, nout=5):
